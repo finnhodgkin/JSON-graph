@@ -32,10 +32,17 @@ h1 {
   margin: 40px auto 35px auto;
 }
 
+h2 {
+  font-size: 110%;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
 #graph-wrap {
   background-color: #d9dae9;
   width: 80%;
   max-width: 900px;
+  min-width: 360px;
   height: 500px;
   border-radius: 18px;
   border: 10px solid #d9dae9;
@@ -47,6 +54,7 @@ h1 {
 
 .list {
   width: 30%;
+  margin: 20px 0px 0px 20px;
   font-size: 16px;
   position: absolute;
   top: 15px;

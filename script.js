@@ -16,12 +16,16 @@ function hovers(listObj, list, startX, sectionWidth) {
     let currentSection = sections.findIndex(a => mouseX < a);
     if (currentSection === -1) currentSection = sections.length;
     if (listObj[list[currentSection - 1]]) {
-      console.log(listObj[list[currentSection - 1]]);
+      document.querySelector('.list').innerHTML = `<h2>${list[currentSection - 1]}</h2><p>${listObj[list[currentSection - 1]].join(",</p><p>")}</p>`;
     }
   }
 
-  canvas.removeEventListener('click', getMouse);
-  canvas.addEventListener('click', getMouse);
+  function remove() {
+    canvas.removeEventListener('mousemove', getMouse);
+    window.removeEventListener('resize', remove);
+  }
+  window.addEventListener('resize', remove);
+  canvas.addEventListener('mousemove', getMouse);
 }
 
 function buildGraph(data) {
@@ -71,7 +75,6 @@ function buildGraph(data) {
   ctx.font = `${size}px serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-
 
   // plot graph for each date
   dates.forEach((el, i) => {
