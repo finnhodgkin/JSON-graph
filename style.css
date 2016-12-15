@@ -42,6 +42,14 @@ h1 {
   box-sizing: border-box;
   box-shadow: 8px 8px 0px rgb(62, 67, 73);
   margin: 0 auto;
+  position: relative;
+}
+
+.list {
+  width: 30%;
+  font-size: 16px;
+  position: absolute;
+  top: 15px;
 }
 
 .bar {
@@ -55,5 +63,6 @@ h1 {
 @media (max-width: 600px) {
   #graph-wrap{
      width: 100%;
+     border-radius: none;
    }
 }

@@ -1,3 +1,29 @@
+function hovers(listObj, list, startX, sectionWidth) {
+  const canvas = document.getElementById('graph');
+  const canvasLeft = Math.round(canvas.getBoundingClientRect().left);
+
+  let mouseX = 0;
+  const sections = [];
+  let section = startX - (sectionWidth / 2);
+
+  list.forEach(() => {
+    sections.push(Math.round(section));
+    section += sectionWidth;
+  });
+
+  function getMouse(e) {
+    mouseX = e.x - canvasLeft;
+    let currentSection = sections.findIndex(a => mouseX < a);
+    if (currentSection === -1) currentSection = sections.length;
+    if (listObj[list[currentSection - 1]]) {
+      console.log(listObj[list[currentSection - 1]]);
+    }
+  }
+
+  canvas.removeEventListener('click', getMouse);
+  canvas.addEventListener('click', getMouse);
+}
+
 function buildGraph(data) {
   const dates = [];
   const datesObj = {};
@@ -26,15 +52,16 @@ function buildGraph(data) {
       datesObj[dates[nextDate - 1]].push(el.name);
     }
   });
-
+  // set up responsive graph variables
   const moveBy = Math.floor((canvas.width - 40) / dates.length);
   const moveByY = Math.round((canvas.height - 40) / data.length) - 1;
   const bottom = Math.floor(canvas.height - 40);
-  const maxRadius = 0.03 * canvas.width;
+  const startX = 50;
+  const maxRadius = 0.034 * canvas.width;
   const minRadius = 0.02 * canvas.width;
   const radius = (maxRadius - minRadius) / data.length;
   const size = Math.floor(0.025 * canvas.width) > 12 ? Math.floor(0.025 * canvas.width) : 12;
-  let xPos = 50;
+  let xPos = startX;
   let yPos = bottom - 10;
   ctx.strokeStyle = 'black';
   ctx.fillStyle = 'black';
@@ -46,8 +73,9 @@ function buildGraph(data) {
   ctx.textBaseline = 'middle';
 
 
-  // start from
+  // plot graph for each date
   dates.forEach((el, i) => {
+    // first graph item
     if (!i) {
       ctx.beginPath();
       ctx.fillStyle = 'grey';
@@ -59,6 +87,7 @@ function buildGraph(data) {
       ctx.fillText(dates[i], xPos, bottom + 20);
       return;
     }
+    // the rest
     ctx.beginPath();
     ctx.globalCompositeOperation = 'destination-over';
     ctx.moveTo(xPos, yPos);
@@ -69,7 +98,6 @@ function buildGraph(data) {
     ctx.closePath();
     total += datesObj[dates[i]].length;
     ctx.globalCompositeOperation = 'source-over';
-
     ctx.fillStyle = 'grey';
     ctx.beginPath();
     ctx.arc(xPos, yPos, (radius * total) + minRadius, 0, Math.PI * 2, true);
@@ -79,6 +107,8 @@ function buildGraph(data) {
     ctx.fillText(total, xPos, yPos);
     ctx.fillText(dates[i], xPos, bottom + 20);
   });
+
+  hovers(datesObj, dates, startX, moveBy);
 }
 
 function build(json) {
@@ -101,6 +131,6 @@ function build(json) {
 
 build('https://gist.githubusercontent.com/finnhodgkin/4b12d304c3109fa337f09ec6d57200c3/raw/087a6ce15fb619085f7410759684df2ab170577a/cor-pun.json');
 
-window.addEventListener('resize', (e) => {
-  build('https://gist.githubusercontent.com/finnhodgkin/4b12d304c3109fa337f09ec6d57200c3/raw/087a6ce15fb619085f7410759684df2ab170577a/cor-pun.json')
+window.addEventListener('resize', () => {
+  build('https://gist.githubusercontent.com/finnhodgkin/4b12d304c3109fa337f09ec6d57200c3/raw/087a6ce15fb619085f7410759684df2ab170577a/cor-pun.json');
 });
