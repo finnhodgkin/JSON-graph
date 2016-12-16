@@ -71,6 +71,6 @@ h2 {
 @media (max-width: 600px) {
   #graph-wrap{
      width: 100%;
-     border-radius: none;
+     border-radius: 0;
    }
 }

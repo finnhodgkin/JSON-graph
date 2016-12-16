@@ -16,7 +16,9 @@ function hovers(listObj, list, startX, sectionWidth) {
     let currentSection = sections.findIndex(a => mouseX < a);
     if (currentSection === -1) currentSection = sections.length;
     if (listObj[list[currentSection - 1]]) {
-      document.querySelector('.list').innerHTML = `<h2>${list[currentSection - 1]}</h2><p>${listObj[list[currentSection - 1]].join(",</p><p>")}</p>`;
+      let pre = list[currentSection - 2] + 1;
+      pre = pre && pre !== list[currentSection -1] ? `${pre} - ` : '';
+      document.querySelector('.list').innerHTML = `<h2>${pre} ${list[currentSection - 1]}</h2><p>${listObj[list[currentSection - 1]].join(",</p><p>")}</p>`;
     }
   }
 
