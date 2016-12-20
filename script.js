@@ -10,15 +10,20 @@ function hovers(listObj, list, startX, sectionWidth) {
     sections.push(Math.round(section));
     section += sectionWidth;
   });
+
   function getMouse(e) {
     mouseX = e.clientX - canvasLeft;
     let currentSection = sections.findIndex(a => mouseX < a);
     if (currentSection === -1) currentSection = sections.length;
     if (listObj[list[currentSection - 1]]) {
       let pre = list[currentSection - 2] + 1;
-      pre = pre && pre !== list[currentSection -1] ? `${pre} - ` : '';
-      document.querySelector('.list').innerHTML = `<h2>${pre} ${list[currentSection - 1]}</h2><p>${listObj[list[currentSection - 1]].join(",</p><p>")}</p>`;
+      pre = pre && pre !== list[currentSection - 1] ? `${pre} - ` : '';
+      document.querySelector('.list').innerHTML = `<h2>${pre} ${list[currentSection - 1]}</h2><p>${listObj[list[currentSection - 1]].join(',</p><p>')}</p>`;
     }
+  }
+
+  function resetText() {
+    document.querySelector('.list').innerHTML = '<h1>Hover graph for further information</h1>';
   }
 
   function remove() {
@@ -27,6 +32,7 @@ function hovers(listObj, list, startX, sectionWidth) {
   }
   window.addEventListener('resize', remove);
   canvas.addEventListener('mousemove', getMouse);
+  canvas.addEventListener('mouseout', resetText);
 }
 
 function buildGraph(data) {
@@ -68,8 +74,8 @@ function buildGraph(data) {
   const size = Math.floor(0.025 * canvas.width) > 12 ? Math.floor(0.025 * canvas.width) : 12;
   let xPos = startX;
   let yPos = bottom - 10;
-  ctx.strokeStyle = 'black';
-  ctx.fillStyle = 'black';
+  ctx.strokeStyle = '#2196F3';
+  ctx.fillStyle = '#2196F3';
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
   ctx.lineWidth = 5;
@@ -82,12 +88,13 @@ function buildGraph(data) {
     // first graph item
     if (!i) {
       ctx.beginPath();
-      ctx.fillStyle = 'grey';
+      ctx.fillStyle = '#2196F3';
       ctx.arc(xPos, yPos, minRadius, 0, Math.PI * 2, true);
       ctx.fill();
       ctx.closePath();
-      ctx.fillStyle = 'black';
+      ctx.fillStyle = '#eee';
       ctx.fillText(total, xPos, yPos);
+      ctx.fillStyle = '#e0e0e0';
       ctx.fillText(dates[i], xPos, bottom + 20);
       return;
     }
@@ -102,12 +109,12 @@ function buildGraph(data) {
     ctx.closePath();
     total += datesObj[dates[i]].length;
     ctx.globalCompositeOperation = 'source-over';
-    ctx.fillStyle = 'grey';
+    ctx.fillStyle = '#2196F3';
     ctx.beginPath();
     ctx.arc(xPos, yPos, (radius * total) + minRadius, 0, Math.PI * 2, true);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = 'black';
+    ctx.fillStyle = '#e0e0e0';
     ctx.fillText(total, xPos, yPos);
     ctx.fillText(dates[i], xPos, bottom + 20);
   });
