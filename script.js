@@ -10,9 +10,8 @@ function hovers(listObj, list, startX, sectionWidth) {
     sections.push(Math.round(section));
     section += sectionWidth;
   });
-
   function getMouse(e) {
-    mouseX = e.x - canvasLeft;
+    mouseX = e.clientX - canvasLeft;
     let currentSection = sections.findIndex(a => mouseX < a);
     if (currentSection === -1) currentSection = sections.length;
     if (listObj[list[currentSection - 1]]) {
@@ -38,7 +37,7 @@ function buildGraph(data) {
   const wrap = window.getComputedStyle(document.querySelector('#graph-wrap'));
   const bW = +(2 * wrap.borderWidth.slice(0, -2));
   canvas.width = +(wrap.width.slice(0, -2)) - bW;
-  canvas.height = +(wrap.height.slice(0, -2)) - bW;
+  canvas.height = 500 - 20;
   const ctx = canvas.getContext('2d');
   let total = 1;
   let nextDate = 1;
