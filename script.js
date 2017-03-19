@@ -1,147 +1,250 @@
-function hovers(listObj, list, startX, sectionWidth) {
-  const canvas = document.getElementById('graph');
-  const canvasLeft = Math.round(canvas.getBoundingClientRect().left);
+const build = (data) => {
+  // *************************************************************************
+  // HELPER FUNCTIONS --------------------------------------------------------
+  // *************************************************************************
 
-  let mouseX = 0;
-  const sections = [];
-  let section = startX - (sectionWidth / 2);
-
-  list.forEach(() => {
-    sections.push(Math.round(section));
-    section += sectionWidth;
-  });
-
-  function getMouse(e) {
-    mouseX = e.clientX - canvasLeft;
-    let currentSection = sections.findIndex(a => mouseX < a);
-    if (currentSection === -1) currentSection = sections.length;
-    if (listObj[list[currentSection - 1]]) {
-      let pre = list[currentSection - 2] + 1;
-      pre = pre && pre !== list[currentSection - 1] ? `${pre} - ` : '';
-      document.querySelector('.list').innerHTML = `<h2>${pre} ${list[currentSection - 1]}</h2><p>${listObj[list[currentSection - 1]].join(',</p><p>')}</p>`;
-    }
+  const waterfall = (arg, tasks, cb) => {
+    const waterfallcb = (error, res) => {
+      if (error) { return cb(error); }
+      n += 1;
+      if (n === tasks.length) {
+        tasks[n - 1](res, cb);
+      } else {
+        tasks[n - 1](res, waterfallcb);
+      }
+    };
+    let n = 0;
+    waterfallcb(null, arg);
   }
 
-  function resetText() {
-    document.querySelector('.list').innerHTML = '<h1>Hover graph for further information</h1>';
+  // *************************************************************************
+  // HANDLE THE DATA ---------------------------------------------------------
+  // *************************************************************************
+
+  const filterCountryData = (data) => {
+    return data
+      .filter( country => country.date && country.childpop )
+      .sort( (a, b) => a.date - b.date );
   }
 
-  function remove() {
-    canvas.removeEventListener('mousemove', getMouse);
-    window.removeEventListener('resize', remove);
-  }
-  window.addEventListener('resize', remove);
-  canvas.addEventListener('mousemove', getMouse);
-  canvas.addEventListener('mouseout', resetText);
-}
+  const groupByPropertySegment = (data, prop, value, sectionLength) => {
+    let currentSegment = data[0][prop];
 
-function buildGraph(data) {
-  const dates = [];
-  const datesObj = {};
-  const last = data[data.length - 1].date;
-  const canvas = document.getElementById('graph');
-  const wrap = window.getComputedStyle(document.querySelector('#graph-wrap'));
-  const bW = +(2 * wrap.borderWidth.slice(0, -2));
-  canvas.width = +(wrap.width.slice(0, -2)) - bW;
-  canvas.height = 500 - 20;
-  const ctx = canvas.getContext('2d');
-  let total = 1;
-  let nextDate = 1;
-  // add dates in segments
-  for (let i = data[0].date; i < last; i += 4) {
-    datesObj[i] = [];
-    dates.push(i);
-  }
-  datesObj[last] = [];
-  dates.push(last);
-  // add countries to date segments
-  data.forEach((el) => {
-    if (el.date >= dates[nextDate]) {
-      datesObj[dates[nextDate]].push(el.name);
-      nextDate += 1;
-    } else {
-      datesObj[dates[nextDate - 1]].push(el.name);
-    }
-  });
-  // set up responsive graph variables
-  const moveBy = Math.floor((canvas.width - 40) / dates.length);
-  const moveByY = Math.round((canvas.height - 40) / data.length) - 1;
-  const bottom = Math.floor(canvas.height - 40);
-  const startX = 50;
-  const maxRadius = 0.034 * canvas.width;
-  const minRadius = 0.02 * canvas.width;
-  const radius = (maxRadius - minRadius) / data.length;
-  const size = Math.floor(0.025 * canvas.width) > 12 ? Math.floor(0.025 * canvas.width) : 12;
-  let xPos = startX;
-  let yPos = bottom - 10;
-  ctx.strokeStyle = '#2196F3';
-  ctx.fillStyle = '#2196F3';
-  ctx.lineJoin = 'round';
-  ctx.lineCap = 'round';
-  ctx.lineWidth = 5;
-  ctx.font = `${size}px serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+    const initialObj = {total:0};
+    initialObj[currentSegment] = [];
 
-  // plot graph for each date
-  dates.forEach((el, i) => {
-    // first graph item
-    if (!i) {
-      ctx.beginPath();
-      ctx.fillStyle = '#2196F3';
-      ctx.arc(xPos, yPos, minRadius, 0, Math.PI * 2, true);
-      ctx.fill();
-      ctx.closePath();
-      ctx.fillStyle = '#eee';
-      ctx.fillText(total, xPos, yPos);
-      ctx.fillStyle = '#e0e0e0';
-      ctx.fillText(dates[i], xPos, bottom + 20);
-      return;
-    }
-    // the rest
-    ctx.beginPath();
-    ctx.globalCompositeOperation = 'destination-over';
-    ctx.moveTo(xPos, yPos);
-    xPos += moveBy;
-    yPos -= moveByY * datesObj[dates[i]].length;
-    ctx.lineTo(xPos, yPos);
-    ctx.stroke();
-    ctx.closePath();
-    total += datesObj[dates[i]].length;
-    ctx.globalCompositeOperation = 'source-over';
+    return data.reduce( (acc, item) => {
+      const section = item[prop];
+      const nextSection = currentSegment + sectionLength;
+      currentSegment = section > nextSection ? nextSection : currentSegment;
+      if (!acc[currentSegment]) acc[currentSegment] = [item[value]];
+      else acc[currentSegment].push(item[value]);
+
+      acc.total += 1;
+      return acc;
+    }, initialObj);
+  }
+
+  const handleData = (data, cb) => {
+    const filteredCountries = filterCountryData(data);
+    cb(null, groupByPropertySegment(filteredCountries, 'date', 'name', 4));
+  }
+
+  // *************************************************************************
+  // BUILD THE GRAPH ---------------------------------------------------------
+  // *************************************************************************
+
+  function buildGraph(data, cb) {
+    // access graph on DOM
+    const canvas = document.getElementById('graph');
+    const wrap = window.getComputedStyle(document.querySelector('#graph-wrap'));
+    const borderWidth = +(2 * wrap.borderWidth.slice(0, -2));
+
+    // build graph
+    canvas.width = +(wrap.width.slice(0, -2)) - borderWidth;
+    canvas.height = 480;
+
+    // get graph context
+    const ctx = canvas.getContext('2d');
+
+    // ---------------------------------
+    // set up responsive graph variables
+    const margin = 40;
+    const startY = canvas.height - margin;
+    const startX = 50;
+
+    // amount to move between sections
+    const moveByX = Math.floor((canvas.width - margin) / (Object.keys(data).length - 1));
+    const moveByY = Math.round((canvas.height - margin) / data.total) - 1;
+
+    // define graph section variability
+    const maxRadius = 0.034 * canvas.width;
+    const minRadius = 0.02 * canvas.width;
+    // define radius addition per item on graph
+    const radius = (maxRadius - minRadius) / data.total;
+
+    // define graph responsive font size
+    const minFontSize = 12;
+    const size = Math.floor(0.025 * canvas.width) > 12 ? Math.floor(0.025 * canvas.width) : minFontSize;
+
+    // current position on graph
+    let xPos = startX;
+    let yPos = startY;
+
+    // define canvas options
+    ctx.strokeStyle = '#2196F3';
     ctx.fillStyle = '#2196F3';
-    ctx.beginPath();
-    ctx.arc(xPos, yPos, (radius * total) + minRadius, 0, Math.PI * 2, true);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = '#e0e0e0';
-    ctx.fillText(total, xPos, yPos);
-    ctx.fillText(dates[i], xPos, bottom + 20);
-  });
+    ctx.lineJoin = 'round';
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 5;
+    ctx.font = `${size}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
 
-  hovers(datesObj, dates, startX, moveBy);
-}
+    // plot current total for graph points
+    let accumulatedNumber = 0;
 
-function build(json) {
-  const list = [];
-  function filterJSON() {
-    const links = {};
-    const graph = list.filter((e) => {
-      if (e.date) links[e.link] = links[e.link] ? 2 : 1;
-      return e.date && links[e.link] < 2 && e.childpop;
-    }).sort((a, b) => a.date - b.date);
-    buildGraph(graph);
-  }
-  fetch(json)
-    .then(blob => blob.json())
-    .then((data) => {
-      list.push(...data);
-      filterJSON();
+    // plot graph for each date
+    Object.keys(data).forEach((value, index) => {
+      if (value === 'total') return;
+
+      contents = data[value];
+
+      accumulatedNumber += contents.length;
+      // first graph item
+      if (!index) {
+        ctx.beginPath();
+        ctx.fillStyle = '#2196F3';
+        ctx.arc(xPos, yPos, minRadius, 0, Math.PI * 2, true);
+        ctx.fill();
+        ctx.closePath();
+        ctx.fillStyle = '#eee';
+        ctx.fillText(accumulatedNumber, xPos, yPos);
+        ctx.fillStyle = '#e0e0e0';
+        ctx.fillText(value, xPos, yPos + 30);
+        return;
+      }
+      // the rest
+      ctx.beginPath();
+      ctx.globalCompositeOperation = 'destination-over';
+      ctx.moveTo(xPos, yPos);
+      xPos += moveByX;
+      yPos -= moveByY * contents.length;
+      ctx.lineTo(xPos, yPos);
+      ctx.stroke();
+      ctx.closePath();
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.fillStyle = '#2196F3';
+      ctx.beginPath();
+      ctx.arc(xPos, yPos, (radius * accumulatedNumber) + minRadius, 0, Math.PI * 2, true);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#e0e0e0';
+      ctx.fillText(accumulatedNumber, xPos, yPos);
+      ctx.fillText(value, xPos, startY + 30);
+
     });
-}
 
-build('https://gist.githubusercontent.com/finnhodgkin/4b12d304c3109fa337f09ec6d57200c3/raw/087a6ce15fb619085f7410759684df2ab170577a/cor-pun.json');
+    cb(null, [data, moveByX, startX]);
+  }
 
-window.addEventListener('resize', () => {
-  build('https://gist.githubusercontent.com/finnhodgkin/4b12d304c3109fa337f09ec6d57200c3/raw/087a6ce15fb619085f7410759684df2ab170577a/cor-pun.json');
+  // *************************************************************************
+  // ADD HOVER LISTS FOR EACH GRAPH SECTION ----------------------------------
+  // *************************************************************************
+  var hovers = ([data, sectionWidth, startX], cb) => {
+    const canvas = document.getElementById('graph');
+    const canvasLeft = Math.round(canvas.getBoundingClientRect().left);
+
+    // get list of graph sections
+    const dataKeys = Object.keys(data).slice(0, -1);
+
+    // build hover sections for each segment of the graph
+    let section = startX - (sectionWidth / 2);
+    const sections = dataKeys.map(() => {
+      return Math.round(section += sectionWidth);
+    });
+
+    var getMouse = (e) => {
+      // find out if mouse is over a section
+      const mouseX = e.clientX - canvasLeft;
+      let currentSection = sections.findIndex(a => mouseX < a);
+
+      if (currentSection === -1) {
+        resetText();
+      } else {
+        const lastValue = new Date().getFullYear() + 1;
+        const nextValue = dataKeys[currentSection + 1] || lastValue;
+        buildText(data, dataKeys[currentSection], nextValue);
+      }
+    }
+
+    function buildText (data, displayValue, nextValue) {
+      // reset list to an empty node
+      const list = document.querySelector('.list');
+      list.innerHTML = '';
+
+      // add title to list
+      const title = document.createElement('h2');
+      title.innerText = `${displayValue}-${+(nextValue) - 1}`;
+      list.appendChild(title);
+
+      // add graph data to list
+      data[displayValue].forEach(entry => {
+        const el = document.createElement('p');
+        el.innerText = entry;
+        list.appendChild(el);
+      });
+    }
+
+    function resetText() {
+      document.querySelector('.list').innerHTML = '<h1>Hover graph for further information</h1>';
+    }
+
+    function remove() {
+      canvas.removeEventListener('mousemove', getMouse);
+      window.removeEventListener('resize', remove);
+    }
+
+    window.addEventListener('resize', remove);
+    canvas.addEventListener('mousemove', getMouse);
+    canvas.addEventListener('mouseout', resetText);
+
+    cb(null, data);
+  };
+
+  // *************************************************************************
+  // COMBINE EVERYTHING ------------------------------------------------------
+  // *************************************************************************
+
+  const createGraph = (data => {
+    const url = 'https://gist.githubusercontent.com/finnhodgkin/4b12d304c3109fa337f09ec6d57200c3/raw/087a6ce15fb619085f7410759684df2ab170577a/cor-pun.json';
+    waterfall(data, [handleData, buildGraph, hovers], (err, res) => {
+      if (err) console.log(err);
+    });
+  })(data);
+};
+
+const fetch = (url, cb) => {
+  const xhr = new XMLHttpRequest();
+  xhr.onreadystatechange = () => {
+    if (xhr.readyState === 4) {
+      if (xhr.status === 200) {
+        cb(null, JSON.parse(xhr.responseText));
+      } else {
+        cb(true);
+      }
+    }
+  };
+  xhr.open('GET', url, true);
+  xhr.send();
+};
+
+fetch('https://gist.githubusercontent.com/finnhodgkin/4b12d304c3109fa337f09ec6d57200c3/raw/087a6ce15fb619085f7410759684df2ab170577a/cor-pun.json',
+  (err, data) => {
+    if (err) console.log(err);
+    else build(data);
+
+    window.addEventListener('resize', () => {
+      build(data);
+    });
 });
